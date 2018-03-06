@@ -1,0 +1,12 @@
+#goal definition
+int32[] error_point
+
+---
+#result definition
+bool found
+int32[] location
+
+---
+#feedback
+bool robot_searching
+
