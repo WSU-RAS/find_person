@@ -8,51 +8,118 @@ import actionlib
 
 import find_person.msg
 
+# libraries pertaining to the pan tilt servos
+import sys
+import argparse
+from copy import copy
+from trajectory_msgs.msg import JointTrajectoryPoint
+from control_msgs.msg import FollowJountTrajectoryAction, \
+	FollowJointTrajectoryGoal
+
+# libraries pertaining to query person location from database
+import json
+from object_detection_msgs.srv import ObjectQuery, ObjectQueryResponse
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from actionlib_msgs.msg import GoalStatus
+import time
+
+# class for pan tilt the servos
+class Trajectory(object):
+    def __init__(self):
+        ns = 'head_controller/'
+        self._client = actionlib.SimpleActionClient(
+            ns + "follow_joint_trajectory",
+            FollowJointTrajectoryAction,
+        )
+        self._goal = FollowJointTrajectoryGoal()
+        server_up = self._client.wait_for_server(timeout=rospy.Duration(10.0))
+        if not server_up:
+            rospy.logerr("Timed out waiting for Joint Trajectory"
+                         " Action Server to connect. Start arbotix node.")
+            rospy.signal_shutdown("Timed out waiting for Action Server")
+            sys.exit(1)
+        self.clear()
+    def add_point(self, positions, time):
+        point = JointTrajectoryPoint()
+        point.positions = copy(positions)
+        point.time_from_start = rospy.Duration(time)
+        self._goal.trajectory.points.append(point)
+    def start(self):
+        self._goal.trajectory.header.stamp = rospy.Time.now()
+        self._client.send_goal(self._goal)
+    def stop(self):
+        self._client.cancel_goal()
+    def wait(self, timeout=15.0):
+        self._client.wait_for_result(timeout=rospy.Duration(timeout))
+    def result(self):
+        return self._client.get_result()
+    def clear(self):
+        self._goal = FollowJointTrajectoryGoal()
+        self._goal.trajectory.joint_names = ["head_" + joint + "_joint" for joint in \
+["pan", "tilt"]]
+
+
+# findperson action server
 class FindPersonServer(object):
-	_goal = findperson.msg.FindPersonGoal()
+
+	# to query position of human
+	def getObjectLocation(name):
+		try:
+			query = rospy.ServiceProxy("query_object", ObjectQuery)
+			result = query(name)
+			return result.locations
+		except rospy.ServiceException, e:
+			rospy.roserr("Service call failed: %s" % e)
+		return None
+
+
+	# messages that are used to publish results and feedback
+	# _goal = findperson.msg.FindPersonGoal()
 	_feedback = findperson.msg.FindPersonFeedback()
 	_result = findperson.msg.FindPersonResult()
 
 	def __init__ (self, name):
 		self._action_name = name
+		# instantiating the object of the trajectory class
+		self.traj = Trajectory()
 		
 		# register all the callbacks
-		self._as = actionlib.SimpleActionServer(self._action_name, findperson.msg.FindPersonAction, execute_cb =  self.goal_cb, autostart =  False)
-		
-		# here we subscribe to the bounding boxes of the detected humans
-		# callback used is the analysis_cb
-		self.subscribe = rospy.Subscriber('/human_detection', self.analysis_cb, queue_size = 1)
+		self._as = actionlib.SimpleActionServer(self._action_name, findperson.msg.FindPersonAction, execute_cb =  self.execute_cb, autostart =  False)
 		
 		# start the server
 		self._as.start()
-	# callback function for goal
-	def goal_cb():
-		rospy.loginfo("Receiving error at step and sending instructons to turn"{})
-		self.goal = as_.acceptNewGoal(error_point)
 
+	# callback function for deciding when to call the action client for the rotation servos
+	def execute_cb(self, goal):
+		r = rospy.Rate(1)
+		success = True
 
-	# callback function for deciding when to call the action client for the otation servos
-	def analysis_cb(self, data):
-		if (!as_.isActive()):
-			return
+		data = self.getObjectLocation(human)
 		
-		while (self.subscribe is True):
-
-			if data.pick is False:
-				# basically if the bounding box is not found then using the task number we will send the 
-				# required goal to the servos for panning it to tilt
-				if taskNumber is 1, 4:
-					# send goal to pan tilt to the left
-					# here we call the action client 
-					# TODO: How to call the action client
-
-				elif taskNumber is 2, 3, 5:
-					# send goal to pan tilt to the right
+		# if the time stamp  location of the person is not updated in the range of 5 seconds
+		if (abs(data.time - time.time()) < 5):
+			rospy.loginfo("Timestamp of detected human expired!")
+			rospy.loginfo("Initiating servo rotation..")
+			
+			if goal.taskNumber is 1, 4:
+					# here the servos are rotated to left
+					self.traj.add_point ([0.5, 1.0], 5.0)
+					self.traj.start()
+					self.traj.wait(15.0)
+					success = True
+			elif goal.taskNumber is 2, 3, 5:
+					# servos are rotated to right
+					self.traj.add_point([-0.5, 0.0], 10.0)
+					self.traj.start()
+					self.traj.wait(15.0)
+					success =  True
+		if success:
+			self._result.found = True
+			self._result.location = [data.location.x, data.location.y]
+			self._as.set_succeeded(self._result)
 
 
 if __name__ == 'main':
 	rospy.init_node('find_person_server')
 	server = FindPersonServer()
 	rospy.spin()
-
-
