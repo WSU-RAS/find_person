@@ -5,7 +5,8 @@ int32 error_step
 ---
 #result definition
 bool found
-float32[] location
+float32 x
+float32 y
 
 ---
 #feedback
