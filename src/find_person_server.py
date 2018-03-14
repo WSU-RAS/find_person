@@ -33,7 +33,7 @@ class Trajectory(object):
             FollowJointTrajectoryAction,
         )
         self._goal = FollowJointTrajectoryGoal()
-        server_up = self._client.wait_for_server(timeout=rospy.Duration(10.0))
+        server_up = self._client.wait_for_server(timeout=rospy.Duration(60.0))
         if not server_up:
             rospy.logerr("Timed out waiting for Joint Trajectory"
                          " Action Server to connect. Start arbotix node.")
