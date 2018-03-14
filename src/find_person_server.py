@@ -121,7 +121,7 @@ class FindPersonServer(object):
 		if success:
 			self._result.found = True
 			# self._result.location = [12., 4.]
-			if len(locations[] != 0):
+			if len(locations) != 0:
 				self._result.location = [data.locations[0].x, data.locations[0].y]
 			self._as.set_succeeded(self._result)
 
