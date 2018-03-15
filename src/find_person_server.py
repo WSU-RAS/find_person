@@ -100,33 +100,42 @@ class FindPersonServer(object):
 		success = True
 
 		data = self.getObjectLocation('human')
+
 		# data = [12, 4]
 		# if the time stamp  location of the person is not updated in the range of 10 seconds
 		# if (True):
-		if data is not None and (datetime.datetime.now() - dateutil.parser.parse(data[0].time)) > datetime.timedelta(seconds = 10):
+		if data is not None and (datetime.datetime.utcnow() - dateutil.parser.parse(data[0].time)) > datetime.timedelta(seconds = 10):
 			rospy.loginfo("Timestamp of detected human expired!")
 			rospy.loginfo("Initiating servo rotation..")
 			rospy.loginfo(goal)
 
-			if goal.task_number == (1.0 or 4.0):
+                        if goal.task_number in [1, 4]:
 					# here the servos are rotated to left
-					self.traj.add_point ([0.5, 1.0], 5.0)
+					self.traj.add_point ([0.0, 0.25], 0.0)
+					self.traj.add_point ([2.0, 0.25], 10.0)
+					self.traj.add_point ([0.0, 0.25], 11.0)
 					self.traj.start()
-					self.traj.wait(15.0)
+					self.traj.wait(11.0)
 					success = True
-			elif goal.task_number == (2.0 or 3.0 or 5.0):
+                        elif goal.task_number in [2, 3, 5]:
 					# servos are rotated to right
-					self.traj.add_point([-0.5, 0.0], 10.0)
+					self.traj.add_point ([0.0, 0.25], 0.0)
+					self.traj.add_point ([-2.0, 0.25], 10.0)
+					self.traj.add_point ([0.0, 0.25], 11.0)
 					self.traj.start()
-					self.traj.wait(15.0)
+					self.traj.wait(11.0)
 					success =  True
-		if success:
+
+			data = self.getObjectLocation('human')
+
+		if data is not None and len(data) != 0:
+			# TODO approach person but don't collide
+			self._result.x = data[0].x
+			self._result.y = data[0].y
 			self._result.found = True
-			if data is not None and len(data) != 0:
-				# TODO approach person but don't collide
-				self._result.x = data[0].x
-				self._result.y = data[0].y
-			self._as.set_succeeded(self._result)
+		else:
+			self._result.found = False
+		self._as.set_succeeded(self._result)
 
 
 if __name__ == '__main__':
