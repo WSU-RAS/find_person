@@ -65,12 +65,14 @@ class FindPersonServer(object):
 
 	# to query position of human
 	def getObjectLocation(self, name):
+		rospy.wait_for_service("query_objects")
+
 		try:
-			query = rospy.ServiceProxy("query_object", ObjectQuery)
+			query = rospy.ServiceProxy("query_objects", ObjectQuery)
 			result = query(name)
 			return result.locations
 		except rospy.ServiceException, e:
-			rospy.roserr("Service call failed: %s" % e)
+			rospy.logerr("Service call failed: %s" % e)
 		return None
 
 
@@ -84,10 +86,10 @@ class FindPersonServer(object):
 		self._action_name = name
 		# instantiating the object of the trajectory class
 		self.traj = Trajectory()
-		
+
 		# register all the callbacks
 		self._as = actionlib.SimpleActionServer(self._action_name, find_person.msg.FindPersonAction, execute_cb =  self.execute_cb, auto_start =  False)
-		
+
 		# start the server
 		self._as.start()
 		rospy.loginfo("Server succesfully started..")
@@ -96,16 +98,16 @@ class FindPersonServer(object):
 	def execute_cb(self, goal):
 		r = rospy.Rate(1)
 		success = True
-		
+
 		data = self.getObjectLocation('human')
 		# data = [12, 4]
 		# if the time stamp  location of the person is not updated in the range of 10 seconds
 		# if (True):
-		if  (datetime.datetime.now - dateutil.parser.parse(data.time)) > datetime.timedelta(seconds = 10):
+		if data is not None and (datetime.datetime.now() - dateutil.parser.parse(data[0].time)) > datetime.timedelta(seconds = 10):
 			rospy.loginfo("Timestamp of detected human expired!")
 			rospy.loginfo("Initiating servo rotation..")
 			rospy.loginfo(goal)
-			
+
 			if goal.task_number == (1.0 or 4.0):
 					# here the servos are rotated to left
 					self.traj.add_point ([0.5, 1.0], 5.0)
@@ -120,9 +122,10 @@ class FindPersonServer(object):
 					success =  True
 		if success:
 			self._result.found = True
-			# self._result.location = [12., 4.]
-			if len(locations) != 0:
-				self._result.location = [data.locations[0].x, data.locations[0].y]
+			if data is not None and len(data) != 0:
+				# TODO approach person but don't collide
+				self._result.x = data[0].x
+				self._result.y = data[0].y
 			self._as.set_succeeded(self._result)
 
 
