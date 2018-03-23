@@ -7,6 +7,8 @@ int32 error_step
 bool found
 float32 x
 float32 y
+float32 w
+float32 z
 
 ---
 #feedback
