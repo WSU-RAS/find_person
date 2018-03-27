@@ -128,7 +128,7 @@ class FindPersonServer(object):
 
 			data = self.getObjectLocation('human')
 
-		if data is not None and len(data) != 0:
+		if data is not None and len(data) != 0 and (datetime.datetime.utcnow() - dateutil.parser.parse(data[0].time)) <= datetime.timedelta(seconds = 10):
 			self._result.x = data[0].x
 			self._result.y = data[0].y
 			self._result.z = data[0].z
