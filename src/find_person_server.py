@@ -115,7 +115,7 @@ class FindPersonServer(object):
 			# for water plant task, robot at base2
 			elif goal.task_number == 0:
                 # if forgot to rinse
-				if goal.error_step == 4:
+				if goal.error_step in [1, 3, 4]:
 					success = self.pan_right()
 
 			data = self.getObjectLocation('human')
