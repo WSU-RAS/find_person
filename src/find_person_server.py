@@ -101,30 +101,22 @@ class FindPersonServer(object):
 
 		data = self.getObjectLocation('human')
 
-		# data = [12, 4]
-		# if the time stamp  location of the person is not updated in the range of 10 seconds
-		# if (True):
 		if data is not None and (datetime.datetime.utcnow() - dateutil.parser.parse(data[0].time)) > datetime.timedelta(seconds = 10):
 			rospy.loginfo("Timestamp of detected human expired!")
 			rospy.loginfo("Initiating servo rotation..")
-			rospy.loginfo(goal)
-
-                        if goal.task_number in [1, 4]:
-					# here the servos are rotated to left
-					self.traj.add_point ([0.0, 0.25], 0.0)
-					self.traj.add_point ([2.0, 0.25], 10.0)
-					self.traj.add_point ([0.0, 0.25], 11.0)
-					self.traj.start()
-					self.traj.wait(11.0)
-					success = True
-                        elif goal.task_number in [2, 3, 5]:
-					# servos are rotated to right
-					self.traj.add_point ([0.0, 0.25], 0.0)
-					self.traj.add_point ([-2.0, 0.25], 10.0)
-					self.traj.add_point ([0.0, 0.25], 11.0)
-					self.traj.start()
-					self.traj.wait(11.0)
-					success =  True
+			# logic for rotation
+			# for walk dog task, robot at entryway
+			if goal.task_number == 2:
+				if goal.error_step == 1:
+					success = self.pan_left()
+                # if keys are forgotten
+				elif goal.error_step == 2:
+					success = self.pan_right()
+			# for water plant task, robot at base2
+			elif goal.task_number == 0:
+                # if forgot to rinse
+				if goal.error_step in [1, 3, 4]:
+					success = self.pan_right()
 
 			data = self.getObjectLocation('human')
 
@@ -137,6 +129,22 @@ class FindPersonServer(object):
 		else:
 			self._result.found = False
 		self._as.set_succeeded(self._result)
+
+	def pan_left(self):
+		self.traj.add_point ([0.0, 0.25], 0.0)
+		self.traj.add_point ([2.0, 0.25], 10.0)
+		self.traj.add_point ([0.0, 0.25], 11.0)
+		self.traj.start()
+		self.traj.wait(11.0)
+		return True
+
+	def pan_right(self):
+		self.traj.add_point ([0.0, 0.25], 0.0)
+		self.traj.add_point ([-2.0, 0.25], 10.0)
+		self.traj.add_point ([0.0, 0.25], 11.0)
+		self.traj.start()
+		self.traj.wait(11.0)
+		return True
 
 
 if __name__ == '__main__':
