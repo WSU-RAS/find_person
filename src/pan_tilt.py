@@ -12,11 +12,27 @@ from trajectory_msgs.msg import JointTrajectoryPoint
 from control_msgs.msg import FollowJointTrajectoryAction, \
                              FollowJointTrajectoryGoal
 
-INITIAL_PAN = 0.0
-INITIAL_TILT = 0.25
 
 # class for pan tilt the servos
 class PanTiltController(object):
+    """ Class for controlling the pan_tilt servos on the RAS bot
+
+    Attributes:
+        initial_pan - constant, initial pan to start the pan_tilt with on init
+        initial_tilt - constant, initial tilt to start the pan_tilt with on init
+        max_left - constant, maximum left the pan servo can go to in double values
+        max_right - constant, maximum right the tilt servo can go to in double values
+        max_up - constant, maximum up the pan servo can go to in double values
+        max_down - constant, maximum down the pan servo can go to in double values
+
+    """
+    initial_pan = 0.0
+    initial_tilt = 0.25
+    max_left = -2.0
+    max_right = 2.0
+    max_up = 0.5
+    max_down = 0.0
+
     def __init__(self):
         # set up client to work with the pan/tilt head
         ns = 'head_controller/'
@@ -42,13 +58,13 @@ class PanTiltController(object):
         self.current_tilt = 0.0
 
         # set the pan_tilt head to its initial location
-
+        self.goto_neutral()
 
     # goto commands
     def goto_neutral(self):
         """ move to the neutral position
         """
-        self.goto(INITIAL_PAN, INITIAL_TILT)
+        self.goto(PanTiltController.initial_pan, PanTiltController.initial_tilt)
 
     def zero(self):
         """ move to zero position
@@ -61,13 +77,19 @@ class PanTiltController(object):
     def goto(self, pan, tilt):
         """ goto a given location
 
-        move the pan and tilt to the locations specified by pan and tilt
+        move the pan and tilt to the locations specified by pan and tilt.
+        Update the internal state to reflect we have moved.
 
         """
+        # move to location
         self.add_point([pan, tilt], 2.0)
         self.start()
         self.wait(2.0)
         self.clear()
+
+        # update our internal location
+        self.current_pan = pan
+        self.current_tilt = tilt
 
     # relative commands
     def pan_left(self, amount):
