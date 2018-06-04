@@ -12,6 +12,9 @@ from trajectory_msgs.msg import JointTrajectoryPoint
 from control_msgs.msg import FollowJointTrajectoryAction, \
                              FollowJointTrajectoryGoal
 
+INITIAL_PAN = 0.0
+INITIAL_TILT = 0.25
+
 # class for pan tilt the servos
 class PanTiltController(object):
     def __init__(self):
@@ -21,7 +24,11 @@ class PanTiltController(object):
             ns + "follow_joint_trajectory",
             FollowJointTrajectoryAction,
         )
+
+        # goal
         self._goal = FollowJointTrajectoryGoal()
+
+        # set up client to server
         server_up = self._client.wait_for_server(timeout=rospy.Duration(60.0))
         if not server_up:
             rospy.logerr("Timed out waiting for Joint Trajectory"
@@ -30,22 +37,56 @@ class PanTiltController(object):
             sys.exit(1)
         self.clear()
 
-    # higher level commands
-    def pan_left(self):
-        self.add_point([0.0, 0.25], 0.0)
-        self.add_point([2.0, 0.25], 10.0)
-        self.add_point([0.0, 0.25], 11.0)
-        self.start()
-        self.wait(11.0)
-        return True
+        # internal location references
+        self.current_pan = 0.0
+        self.current_tilt = 0.0
 
-    def pan_right(self):
-        self.add_point([0.0, 0.25], 0.0)
-        self.add_point([-2.0, 0.25], 10.0)
-        self.add_point([0.0, 0.25], 11.0)
+        # set the pan_tilt head to its initial location
+
+
+    # goto commands
+    def goto_neutral(self):
+        """ move to the neutral position
+        """
+        self.goto(INITIAL_PAN, INITIAL_TILT)
+
+    def zero(self):
+        """ move to zero position
+
+        move both the pan and tilt to their respective zero positions
+
+        """
+        self.goto(0.0, 0.0)
+
+    def goto(self, pan, tilt):
+        """ goto a given location
+
+        move the pan and tilt to the locations specified by pan and tilt
+
+        """
+        self.add_point([pan, tilt], 2.0)
         self.start()
-        self.wait(11.0)
-        return True
+        self.wait(2.0)
+        self.clear()
+
+    # relative commands
+    def pan_left(self, amount):
+        """ pan left by the given amount
+
+        move the pan servo to the left by the given amount.
+        TODO figure out the conversion rate between the float and the degrees and change amount to degrees
+
+        """
+        self.goto(self.current_pan + amount, self.current_tilt)
+
+    def pan_right(self, amount):
+        """ pan left by the given amount
+
+        move the pan servo to the left by the given amount.
+        TODO figure out the conversion rate between the float and the degrees and change amount to degrees
+
+        """
+        self.goto(self.current_pan - amount, self.current_tilt)
 
     # lower level commands
     def add_point(self, positions, time):
