@@ -17,6 +17,8 @@ from control_msgs.msg import FollowJointTrajectoryAction, \
 class PanTiltController(object):
     """ Class for controlling the pan_tilt servos on the RAS bot
 
+    Note that right is negative and left is positive for the pan servo.
+
     Attributes:
         initial_pan - constant, initial pan to start the pan_tilt with on init
         initial_tilt - constant, initial tilt to start the pan_tilt with on init
@@ -28,8 +30,8 @@ class PanTiltController(object):
     """
     initial_pan = 0.0
     initial_tilt = 0.25
-    max_left = -2.0
-    max_right = 2.0
+    max_left = 2.0
+    max_right = -2.0
     max_up = 0.5
     max_down = 0.0
 
